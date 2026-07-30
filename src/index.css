@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme {
+  /* This replaces the old tailwind.config.js theme settings */
+  --color-gansetu-orange: #ea580c;
+  --font-sans: 'Inter', sans-serif;
+}
