@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Save, User, MapPin, Map } from 'lucide-react';
 
-// 1. ADDED THE UNIFIED CITIES ARRAY
 const CITIES = [
   'Pune', 'Mumbai', 'Pimpri-Chinchwad', 'Thane', 'Nashik', 
   'Nagpur', 'Navi Mumbai', 'Kalyan-Dombivli', 'Other'
@@ -19,43 +18,57 @@ export default function EditProfileModal({ user, onClose, onProfileUpdated }) {
   useEffect(() => {
     const fetchCurrentProfile = async () => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, city, area')
-        .eq('id', user.id)
-        .single();
       
-      if (data) {
-        setFullName(data.full_name || '');
-        setCity(data.city || '');
-        setArea(data.area || '');
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, city, area')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setFullName(data.full_name || '');
+          setCity(data.city || '');
+          setArea(data.area || '');
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
+        setFetching(false);
       }
-      setFetching(false);
     };
+    
     fetchCurrentProfile();
   }, [user]);
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    // Crucial for SPAs to prevent native HTML form POST reloads
+    e.preventDefault(); 
     setLoading(true);
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        full_name: fullName, 
-        city: city,
-        area: area 
-      })
-      .eq('id', user.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          full_name: fullName, 
+          city: city,
+          area: area 
+        })
+        .eq('id', user.id);
 
-    setLoading(false);
+      if (error) throw error;
 
-    if (error) {
+      // Safely call the parent update function, then close
+      if (onProfileUpdated) onProfileUpdated();
+      onClose();
+      
+    } catch (error) {
       console.error("Error updating profile:", error);
       alert("Failed to update profile. Please try again.");
-    } else {
-      onProfileUpdated();
-      onClose();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,7 +110,7 @@ export default function EditProfileModal({ user, onClose, onProfileUpdated }) {
               </div>
             </div>
 
-            {/* 2. UPDATED CITY DROPDOWN TO USE THE ARRAY */}
+            {/* CITY DROPDOWN */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">City</label>
               <div className="relative">
@@ -111,14 +124,9 @@ export default function EditProfileModal({ user, onClose, onProfileUpdated }) {
                   className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-gray-50 focus:bg-white text-gray-900 appearance-none"
                 >
                   <option value="" disabled>Select your city</option>
-                  
-                  {/* Loop through our unified CITIES array */}
                   {CITIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+                    <option key={c} value={c}>{c}</option>
                   ))}
-                  
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
