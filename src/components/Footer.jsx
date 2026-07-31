@@ -62,7 +62,7 @@ export default function Footer() {
                         <ul className="space-y-3">
                             <li className="flex items-start gap-3 text-gray-500 text-sm">
                                 <Mail className="h-4 w-4 mt-0.5 shrink-0 text-orange-500" />
-                                <a href="mailto:support@gansetu.in" className="hover:text-orange-600 transition-colors">support@gansetu.in</a>
+                                <a href="mailto:gansetu.support@gmail.com" className="hover:text-orange-600 transition-colors">support@gansetu.in</a>
                             </li>
                         </ul>
                     </div>

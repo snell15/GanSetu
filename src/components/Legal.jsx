@@ -168,7 +168,7 @@ export default function Legal() {
                 <p><strong>We do not sell your personal data to third parties.</strong> Your public profile (name, city, and avatar) and your active listings are visible to other users. We use industry-standard security (via Supabase) to protect your account credentials. Because GanSetu is a peer-to-peer platform, we recommend using caution and not sharing sensitive financial information in public spaces.</p>
                 
                 <h2 className="text-xl font-bold text-gray-900 mt-8">4. Contact Us</h2>
-                <p>If you have any questions about this Privacy Policy, please contact us via the Support page or email us at support@gansetu.in.</p>
+                <p>If you have any questions about this Privacy Policy, please contact us via the Support page or email us at gansetu.support@gmail.com</p>
               </div>
             )}
 
