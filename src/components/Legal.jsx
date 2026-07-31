@@ -128,7 +128,7 @@ export default function Legal() {
                   Whether you need help with a listing, want to report an issue, or just want to say hi, our team is here for you.
                 </p>
                 <a 
-                  href="mailto:support@gansetu.in" 
+                  href="mailto:gansetu.support@gmail.com" 
                   className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm sm:text-base font-bold rounded-full text-gray-900 bg-white hover:bg-orange-50 transition-colors shadow-sm hover:shadow"
                 >
                   Contact Support
