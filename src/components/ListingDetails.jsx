@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { toPng } from 'html-to-image';
-import { MessageCircle, MapPin, Ruler, Truck, Info, ArrowLeft, Image as ImageIcon, Maximize, Download } from 'lucide-react';
+import { MessageCircle, MapPin, Ruler, Truck, Info, ArrowLeft, Image as ImageIcon, Maximize, Download, CheckCircle } from 'lucide-react';
 
 // --- NEW GENERATOR COMPONENT ---
 function ShareCardGenerator({ listing, currentUser }) {
@@ -84,6 +84,7 @@ export default function ListingDetails({ user, onOpenChat }) {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -133,6 +134,25 @@ export default function ListingDetails({ user, onOpenChat }) {
   }
 
   const isOwner = user?.id === listing.seller_id;
+  const isSold = listing.status === 'sold';
+
+  const handleMarkAsSold = async () => {
+    if (!window.confirm("Are you sure you want to mark this decoration as Sold?")) return;
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ status: 'sold' })
+        .eq('id', listing.id);
+
+      if (error) throw error;
+      setListing({ ...listing, status: 'sold' }); // Instantly update UI
+    } catch (err) {
+      alert("Error updating status: " + err.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
@@ -156,7 +176,11 @@ export default function ListingDetails({ user, onOpenChat }) {
           <div className="w-full md:w-1/2 p-4 md:border-r border-gray-100 flex flex-col">
             <div className="h-[300px] sm:h-[400px] w-full rounded-xl bg-gray-100 overflow-hidden relative shrink-0">
               {activeImage ? (
-                <img src={activeImage} alt={listing.title} className="w-full h-full object-contain bg-black/5" />
+                <img 
+                  src={activeImage} 
+                  alt={listing.title} 
+                  className={`w-full h-full object-contain bg-black/5 ${isSold ? 'grayscale opacity-75' : ''}`} 
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
                   <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
@@ -173,7 +197,11 @@ export default function ListingDetails({ user, onOpenChat }) {
                     className={`shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-all ${activeImage === img.image_url ? 'border-orange-500 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                   >
-                    <img src={img.image_url} alt="Thumbnail" className="w-full h-full object-cover" />
+                    <img 
+                      src={img.image_url} 
+                      alt="Thumbnail" 
+                      className={`w-full h-full object-cover ${isSold ? 'grayscale' : ''}`} 
+                    />
                   </button>
                 ))}
               </div>
@@ -183,13 +211,20 @@ export default function ListingDetails({ user, onOpenChat }) {
           <div className="w-full md:w-1/2 p-5 sm:p-6 flex flex-col">
 
             <div className="mb-5">
-              <span className="inline-block px-2.5 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-wider rounded-md mb-2">
-                {listing.category}
-              </span>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight mb-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-block px-2.5 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
+                  {listing.category}
+                </span>
+                {isSold && (
+                  <span className="inline-block px-2.5 py-1 bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wider rounded-md flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" /> Sold Out
+                  </span>
+                )}
+              </div>
+              <h1 className={`text-xl sm:text-2xl font-extrabold leading-tight mb-1 ${isSold ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                 {listing.title}
               </h1>
-              <p className="text-2xl font-black text-orange-600">
+              <p className={`text-2xl font-black ${isSold ? 'text-gray-400' : 'text-orange-600'}`}>
                 ₹{listing.price.toLocaleString('en-IN')}
               </p>
             </div>
@@ -252,12 +287,21 @@ export default function ListingDetails({ user, onOpenChat }) {
                 </div>
               </div>
 
-              {isOwner ? (
+              {/* NEW SMART BUTTON LOGIC WITH SOLD STATE */}
+              {isSold ? (
                 <button
                   disabled
-                  className="w-full bg-gray-100 text-gray-500 font-bold text-base py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-gray-200"
+                  className="w-full bg-gray-100 text-gray-400 font-bold text-base py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-gray-200"
                 >
-                  This is your listing
+                  This item has been sold
+                </button>
+              ) : isOwner ? (
+                <button
+                  onClick={handleMarkAsSold}
+                  disabled={isUpdating}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-green-200 transition-all hover:-translate-y-0.5 active:scale-95"
+                >
+                  {isUpdating ? "Updating..." : "Mark as Sold"}
                 </button>
               ) : (
                 <button

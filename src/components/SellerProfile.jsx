@@ -31,7 +31,7 @@ export default function SellerProfile({ user, favorites, onToggleFavorite, onReq
         if (profileError) throw profileError;
         setSeller(profileData);
 
-        // STEP 2: FETCH THE LISTINGS
+        // STEP 2: FETCH THE LISTINGS (Now includes 'sold' items)
         const { data: listingsData, error: listingsError } = await supabase
           .from('listings')
           .select(`
@@ -41,7 +41,7 @@ export default function SellerProfile({ user, favorites, onToggleFavorite, onReq
             listing_images (image_url, is_primary)
           `)
           .eq('seller_id', id)
-          .eq('status', 'active')
+          .in('status', ['active', 'sold']) // UPDATED LINE
           .order('created_at', { ascending: false });
 
         if (listingsError) {
@@ -136,7 +136,6 @@ export default function SellerProfile({ user, favorites, onToggleFavorite, onReq
               )}
             </div>
 
-            {/* FIXED: Cleaned up conditional logic for the header button */}
             <div className="mt-2 flex justify-center sm:justify-start">
               {isOwnProfile ? (
                 <div className="flex items-center gap-2 bg-orange-50 text-orange-700 px-5 py-2.5 rounded-xl border border-orange-100 font-bold text-sm shadow-sm">
@@ -159,7 +158,8 @@ export default function SellerProfile({ user, favorites, onToggleFavorite, onReq
       {/* Seller's Catalog */}
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          {isOwnProfile ? 'Your Active Listings' : 'Active Listings'}
+          {/* UPDATED HEADER TEXT */}
+          {isOwnProfile ? 'Your Listings' : 'Seller Listings'} 
           <span className="bg-gray-100 text-gray-500 text-xs px-2.5 py-1 rounded-full">{sellerListings.length}</span>
         </h2>
 
@@ -168,11 +168,12 @@ export default function SellerProfile({ user, favorites, onToggleFavorite, onReq
             <div className="bg-orange-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Package className="h-8 w-8 text-orange-500" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">No active listings</h3>
+            {/* UPDATED EMPTY STATE TEXT */}
+            <h3 className="text-lg font-bold text-gray-900 mb-2">No listings yet</h3>
             <p className="text-gray-500 max-w-sm mx-auto">
               {isOwnProfile
-                ? "You don't have any decorations currently available for sale. Head to your dashboard to add one!"
-                : "This seller doesn't have any decorations currently available for sale. Check back later!"}
+                ? "You haven't listed any decorations yet. Head to your dashboard to add one!"
+                : "This seller hasn't listed any decorations yet. Check back later!"}
             </p>
           </div>
         ) : (
@@ -185,7 +186,7 @@ export default function SellerProfile({ user, favorites, onToggleFavorite, onReq
                 favorites={favorites}
                 onToggleFavorite={onToggleFavorite}
                 onRequireAuth={onRequireAuth}
-                onOpenChat={onOpenChat} /* <- IMPORTANT: Passing the chat function down! */
+                onOpenChat={onOpenChat}
               />
             ))}
           </div>

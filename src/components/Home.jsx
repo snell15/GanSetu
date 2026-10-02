@@ -35,10 +35,11 @@ export default function Home({ user, favorites, onToggleFavorite, onRequireAuth,
           profiles (id, full_name, city, area),
           listing_images (image_url, is_primary)
         `, { count: 'exact' })
-        .eq('status', 'active');
+        // UPDATED: Now fetches both active and sold items, newest first!
+        .in('status', ['active', 'sold'])
+        .order('created_at', { ascending: false });
 
       if (activeCategory === 'Other') {
-        // 1. Define all our standard categories
         const mainCategories = [
           'Makar / Singhasan', 
           'Mandap / Temple', 
@@ -49,14 +50,10 @@ export default function Home({ user, favorites, onToggleFavorite, onRequireAuth,
           'Pooja Accessories'
         ];
         
-        // 2. Format them so Supabase understands the list
         const formattedList = `(${mainCategories.map(cat => `"${cat}"`).join(',')})`;
-        
-        // 3. Ask Supabase for anything that is NOT in that list!
         query = query.not('category', 'in', formattedList);
         
       } else if (activeCategory !== 'All') {
-        // Normal behavior for standard categories
         query = query.ilike('category', activeCategory);
       }
 
