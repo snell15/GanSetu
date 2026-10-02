@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Loader2, Camera, X, UploadCloud, AlertCircle } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 
 const CATEGORIES = [
   'Makar / Singhasan', 
@@ -45,9 +46,11 @@ const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
 export default function AddListing({ user, onClose, onComplete, onListingAdded }) {
   const [formData, setFormData] = useState({
     title: '', description: '', price: '', category: CATEGORIES[0], condition: CONDITIONS[0],
-    city: user?.user_metadata?.city || CITIES[0], location: user?.user_metadata?.area || '',
+    // Changed this line to default to empty string '' instead of CITIES[0]
+    city: user?.user_metadata?.city || '', 
+    location: user?.user_metadata?.area || '',
     delivery_available: false, dimensions: '', max_idol_size: ''
-  });
+});
 
   const [customCategory, setCustomCategory] = useState('');
   const [images, setImages] = useState([]);
@@ -87,6 +90,8 @@ export default function AddListing({ user, onClose, onComplete, onListingAdded }
       if (listingError) throw listingError;
       onListingAdded();
 
+      let firstImageUrl = '';
+
       for (let i = 0; i < images.length; i++) {
         const { file } = images[i];
         const fileExt = file.name.split('.').pop() || 'jpg';
@@ -97,8 +102,32 @@ export default function AddListing({ user, onClose, onComplete, onListingAdded }
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from('decorations').getPublicUrl(filePath);
+        if (i === 0) firstImageUrl = publicUrl; // Save for the email
+
         await supabase.from('listing_images').insert([{ listing_id: listing.id, image_url: publicUrl, is_primary: i === 0 }]);
       }
+
+      // --- AUTOMATED EMAIL TRIGGER ---
+      try {
+        const liveListingUrl = `https://gansetu.vercel.app/listing/${listing.id}`;
+        await emailjs.send(
+          'service_3sqygbd',   // Replace with your EmailJS Service ID
+          'template_2hwhzgs',  // Replace with your EmailJS Template ID
+          {
+            to_name: user.user_metadata?.full_name || 'GanSetu Member',
+            to_email: user.email,
+            item_title: formData.title,
+            item_price: formData.price,
+            item_image: firstImageUrl,
+            listing_url: liveListingUrl,
+            reply_to: "gansetu.support@gmail.com"
+          }, 
+          'gRgz0T4a3FAodaRMU'    // Replace with your EmailJS Public Key
+        );
+      } catch (emailErr) {
+        console.error("Email failed to send, but listing was created", emailErr);
+      }
+
       onComplete();
     } catch (err) {
       setError(err.message);
@@ -150,8 +179,21 @@ export default function AddListing({ user, onClose, onComplete, onListingAdded }
           </div>
           <div><label className="block text-sm font-bold text-gray-700 mb-1">Condition</label><select value={formData.condition} onChange={e => setFormData({ ...formData, condition: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm">{CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
           <div><label className="block text-sm font-bold text-gray-700 mb-1">Title <span className="text-orange-500">*</span></label><input type="text" required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm" /></div>
-          <div><label className="block text-sm font-bold text-gray-700 mb-1">Price (₹) <span className="text-orange-500">*</span></label><input type="number" required min="0" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm" /></div>
-          <div><label className="block text-sm font-bold text-gray-700 mb-1">City</label><select value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm">{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+          
+          {/* THE NEW PRICING TIP SECTION */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Price (₹) <span className="text-orange-500">*</span></label>
+            <input type="number" required min="0" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} placeholder="0 for Donation" className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm" />
+            <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-3 flex gap-3 items-start">
+              <span className="text-blue-500 text-lg">💡</span>
+              <p className="text-xs text-blue-800 leading-relaxed">
+                <strong>GanSetu Tip:</strong> Keep this platform affordable. We encourage pricing items at least <strong>40-50% below market value</strong>. Well-priced items (or free donations) find homes 3x faster!
+              </p>
+            </div>
+          </div>
+          {/* END NEW PRICING TIP */}
+
+          <div><label className="block text-sm font-bold text-gray-700 mb-1">City</label><select required value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm"><option value="" disabled>Select a City</option>{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
           <div><label className="block text-sm font-bold text-gray-700 mb-1">Area / Location</label><input type="text" required value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm" /></div>
           <div><label className="block text-sm font-bold text-gray-700 mb-1">Setup Dimensions</label><input type="text" value={formData.dimensions} onChange={e => setFormData({ ...formData, dimensions: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm" /></div>
           <div><label className="block text-sm font-bold text-gray-700 mb-1">Fits Idol Size</label><input type="text" value={formData.max_idol_size} onChange={e => setFormData({ ...formData, max_idol_size: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm" /></div>

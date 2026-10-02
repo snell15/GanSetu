@@ -1,9 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-// ADDED the 'Maximize' icon for the Idol Size badge
-import { MessageCircle, MapPin, Ruler, Truck, Info, ArrowLeft, Image as ImageIcon, Maximize } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { MessageCircle, MapPin, Ruler, Truck, Info, ArrowLeft, Image as ImageIcon, Maximize, Download } from 'lucide-react';
 
+// --- NEW GENERATOR COMPONENT ---
+function ShareCardGenerator({ listing, currentUser }) {
+  const cardRef = useRef(null);
+
+  const isSeller = currentUser?.id === listing.seller_id;
+  const isAdmin = currentUser?.email === 'gansetu.support@gmail.com'; 
+
+  if (!isSeller && !isAdmin) return null; 
+
+  const generateImage = async () => {
+    if (cardRef.current) {
+      try {
+        const dataUrl = await toPng(cardRef.current, { cacheBust: true });
+        const link = document.createElement('a');
+        link.download = `GanSetu-${listing.title}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('Failed to generate image', err);
+        alert("Could not generate image. Please try again.");
+      }
+    }
+  };
+
+  const heroImage = listing.listing_images?.[0]?.image_url || '/placeholder.png';
+
+  return (
+    <div className="mt-4">
+      <button 
+        onClick={generateImage} 
+        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-pink-600 text-white font-bold px-4 py-3 rounded-xl hover:opacity-90 transition-all shadow-md"
+      >
+        <Download className="w-5 h-5" />
+        {isAdmin ? "Admin: Download Promo Card" : "Download WhatsApp Status Card"}
+      </button>
+
+      <div className="absolute -left-[9999px]"> 
+        <div 
+          ref={cardRef} 
+          className="w-[1080px] h-[1080px] bg-white p-12 flex flex-col items-center justify-between border-[24px] border-orange-100 relative overflow-hidden"
+        >
+          <div className="text-center mt-8">
+            <h1 className="text-7xl font-extrabold text-orange-600 mb-2">GanSetu 🚩</h1>
+            <p className="text-3xl font-medium text-gray-500">Eco-Friendly Ganpati Decorations</p>
+          </div>
+          <div className="w-[850px] h-[550px] rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-100">
+            <img 
+              src={heroImage} 
+              alt={listing.title}
+              crossOrigin="anonymous" 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+          <div className="w-full px-12 flex justify-between items-end mb-8">
+            <div>
+              <h2 className="text-5xl font-bold text-gray-900 mb-4 truncate w-[600px]">{listing.title}</h2>
+              <p className="text-3xl text-gray-600 flex items-center gap-2">
+                📍 {listing.profiles?.area || 'Area'}, {listing.profiles?.city || 'City'}
+              </p>
+            </div>
+            <div className="text-5xl bg-green-100 text-green-800 px-8 py-4 rounded-3xl font-black shadow-sm">
+              ₹{listing.price}
+            </div>
+          </div>
+          <div className="w-full bg-orange-50 py-6 rounded-2xl text-center">
+            <p className="text-3xl font-bold text-orange-800">Buy now at <span className="text-orange-600">gansetu.vercel.app</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN DETAILS COMPONENT ---
 export default function ListingDetails({ user, onOpenChat }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -58,7 +132,6 @@ export default function ListingDetails({ user, onOpenChat }) {
     );
   }
 
-  // LOGIC CHECK: Is the person viewing this page the owner of the listing?
   const isOwner = user?.id === listing.seller_id;
 
   return (
@@ -67,11 +140,10 @@ export default function ListingDetails({ user, onOpenChat }) {
 
         <button
           onClick={() => {
-            // Check if there is a previous page in the React Router history
             if (window.history.state && window.history.state.idx > 0) {
               navigate(-1);
             } else {
-              navigate('/'); // Failsafe: Send them to the marketplace!
+              navigate('/'); 
             }
           }}
           className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 mb-4 transition-colors w-fit"
@@ -81,9 +153,6 @@ export default function ListingDetails({ user, onOpenChat }) {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
 
-          {/* ========================================== */}
-          {/* LEFT COLUMN: IMAGE GALLERY                 */}
-          {/* ========================================== */}
           <div className="w-full md:w-1/2 p-4 md:border-r border-gray-100 flex flex-col">
             <div className="h-[300px] sm:h-[400px] w-full rounded-xl bg-gray-100 overflow-hidden relative shrink-0">
               {activeImage ? (
@@ -111,9 +180,6 @@ export default function ListingDetails({ user, onOpenChat }) {
             )}
           </div>
 
-          {/* ========================================== */}
-          {/* RIGHT COLUMN: ACTION & DETAILS             */}
-          {/* ========================================== */}
           <div className="w-full md:w-1/2 p-5 sm:p-6 flex flex-col">
 
             <div className="mb-5">
@@ -128,7 +194,6 @@ export default function ListingDetails({ user, onOpenChat }) {
               </p>
             </div>
 
-            {/* EXPANDED SPECS GRID: Now accommodates 5 items neatly */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
               <div className="bg-gray-50 p-3 rounded-xl flex flex-col gap-0.5">
                 <Info className="h-4 w-4 text-gray-400 mb-0.5" />
@@ -142,14 +207,12 @@ export default function ListingDetails({ user, onOpenChat }) {
                 <span className="font-semibold text-gray-900 text-sm truncate">{listing.dimensions || 'N/A'}</span>
               </div>
 
-              {/* NEW: Max Idol Size Badge */}
               <div className="bg-gray-50 p-3 rounded-xl flex flex-col gap-0.5">
                 <Maximize className="h-4 w-4 text-gray-400 mb-0.5" />
                 <span className="text-[10px] font-bold text-gray-500 uppercase">Idol Fit</span>
                 <span className="font-semibold text-gray-900 text-sm truncate">{listing.max_idol_size || 'N/A'}</span>
               </div>
 
-              {/* UPDATED: Location Badge now includes Area */}
               <div className="bg-gray-50 p-3 rounded-xl flex flex-col gap-0.5 md:col-span-2">
                 <MapPin className="h-4 w-4 text-gray-400 mb-0.5" />
                 <span className="text-[10px] font-bold text-gray-500 uppercase">Location</span>
@@ -189,7 +252,6 @@ export default function ListingDetails({ user, onOpenChat }) {
                 </div>
               </div>
 
-              {/* NEW SMART BUTTON LOGIC */}
               {isOwner ? (
                 <button
                   disabled
@@ -206,6 +268,10 @@ export default function ListingDetails({ user, onOpenChat }) {
                   Chat with Seller
                 </button>
               )}
+
+              {/* INTEGRATED: The Generator Component injected here */}
+              <ShareCardGenerator listing={listing} currentUser={user} />
+
             </div>
 
           </div>
