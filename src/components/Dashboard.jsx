@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
-import { Loader2, Package, PlusCircle, Trash2, Edit, ExternalLink, X, Save, Eye } from 'lucide-react';
+import { Loader2, Package, PlusCircle, Trash2, Edit, ExternalLink, X, Save, Eye, CheckCircle } from 'lucide-react';
 
 export default function Dashboard({ user, onSellClick }) {
   const navigate = useNavigate();
@@ -33,6 +33,8 @@ export default function Dashboard({ user, onSellClick }) {
             listing_images (image_url, is_primary)
           `)
           .eq('seller_id', user.id)
+          // UPDATED: Allow both active and sold items to show up in the dashboard
+          .in('status', ['active', 'sold'])
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -193,20 +195,21 @@ export default function Dashboard({ user, onSellClick }) {
                   });
                   
                   const isActive = listing.status === 'active';
+                  const isSold = listing.status === 'sold';
 
                   return (
-                    <tr key={listing.id} className={`hover:bg-gray-50/50 transition-colors group ${!isActive ? 'opacity-60' : ''}`}>
+                    <tr key={listing.id} className={`hover:bg-gray-50/50 transition-colors group ${isSold ? 'bg-gray-50' : ''}`}>
                       <td className="p-4">
                         <div className="flex items-center gap-4">
                           <div className="h-14 w-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                             <img 
                               src={primaryImage} 
                               alt={listing.title} 
-                              className="h-full w-full object-cover" 
+                              className={`h-full w-full object-cover ${isSold ? 'grayscale opacity-70' : ''}`} 
                             />
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900 line-clamp-1">
+                            <p className={`font-bold line-clamp-1 ${isSold ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                               {listing.title}
                             </p>
                             <Link 
@@ -218,11 +221,16 @@ export default function Dashboard({ user, onSellClick }) {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 font-bold text-gray-900">
+                      <td className={`p-4 font-bold ${isSold ? 'text-gray-400' : 'text-gray-900'}`}>
                         ₹{listing.price}
                       </td>
                       <td className="p-4">
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide flex items-center gap-1 w-fit ${
+                          isActive ? 'bg-green-100 text-green-700' : 
+                          isSold ? 'bg-gray-200 text-gray-600' : 
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {isSold && <CheckCircle className="w-3 h-3" />}
                           {listing.status}
                         </span>
                       </td>
